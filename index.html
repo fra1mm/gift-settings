@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Настройки бота</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{--bg:var(--tg-theme-secondary-bg-color,#f1f1f4);--card:var(--tg-theme-section-bg-color,var(--tg-theme-bg-color,#fff));
+--text:var(--tg-theme-text-color,#111);--hint:var(--tg-theme-hint-color,#888);--accent:var(--tg-theme-button-color,#2a8af6);
+--accent-text:var(--tg-theme-button-text-color,#fff);--head:var(--tg-theme-section-header-text-color,var(--hint));--danger:var(--tg-theme-destructive-text-color,#e5484d)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.35 -apple-system,system-ui,Segoe UI,Roboto,sans-serif;padding:12px 16px 90px}
+h2{font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--head);margin:18px 4px 6px;font-weight:600}
+.card{background:var(--card);border-radius:12px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:11px 14px;min-height:48px}
+.row+.row{border-top:1px solid color-mix(in srgb,var(--hint) 20%,transparent)}
+.row>label:first-child{flex:1}
+.row.changed>label:first-child::after{content:" •";color:var(--accent);font-weight:700}
+input[type=number]{width:96px;padding:7px 8px;border-radius:8px;border:1px solid color-mix(in srgb,var(--hint) 40%,transparent);
+background:transparent;color:var(--text);font:inherit;text-align:right}
+input[type=number].bad{border-color:var(--danger)}
+.sw{position:relative;width:46px;height:28px;flex:none}
+.sw input{opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;border-radius:28px;background:color-mix(in srgb,var(--hint) 45%,transparent);transition:.15s}
+.sw span::before{content:"";position:absolute;width:22px;height:22px;left:3px;top:3px;border-radius:50%;background:#fff;transition:.15s}
+.sw input:checked+span{background:var(--accent)}
+.sw input:checked+span::before{transform:translateX(18px)}
+.note{color:var(--hint);font-size:13px;margin:14px 4px}
+#save{position:fixed;left:16px;right:16px;bottom:16px;padding:14px;border:0;border-radius:12px;background:var(--accent);
+color:var(--accent-text);font:600 16px system-ui;display:none}
+.warn{color:var(--danger)}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<p class="note" id="note"></p>
+<button id="save">Сохранить</button>
+<script>
+const SCHEMA = [["AUTOBUY", "bool", "Покупки", "Автопокупка (реальные покупки на Portals)", null, null], ["MANUAL_BUY", "bool", "Покупки", "Кнопка «Купить ботом» под сигналами", null, null], ["MAX_BUY_TON", "float", "Покупки", "Макс. цена одной покупки, TON", 0, 10000], ["MAX_BUYS_PER_DAY", "int", "Покупки", "Макс. покупок за сутки", 0, 1000], ["MAX_SPEND_PER_DAY_TON", "float", "Покупки", "Макс. трат за сутки, TON", 0, 100000], ["AUTOBUY_MIN_PROFIT_PCT", "float", "Покупки", "Мин. прибыль для автопокупки, %", 0, 1000], ["AUTO_RELIST", "bool", "Покупки", "Сразу выставлять купленное", null, null], ["MIN_PROFIT_PCT", "float", "Сигналы", "Мин. прибыль, %", 0, 1000], ["MIN_PROFIT_TON", "float", "Сигналы", "Мин. прибыль, TON", 0, 10000], ["MIN_PRICE_TON", "float", "Сигналы", "Цена лота от, TON", 0, 100000], ["MAX_PRICE_TON", "float", "Сигналы", "Цена лота до, TON", 0, 100000], ["MIN_MODEL_LISTINGS", "int", "Сигналы", "Мин. лотов модели на рынке", 1, 100], ["MIN_MODEL_SALES", "int", "Сигналы", "Мин. продаж модели за окно (0 - не требовать)", 0, 1000], ["UNDERCUT_PCT", "float", "Сигналы", "Выставлять дешевле следующего лота на, %", 0, 50], ["MAX_GAP_PCT", "float", "Сигналы", "Подозрительно дешевле рынка, % (0 - выкл)", 0, 100], ["MAX_TREND_DROP_PCT", "float", "Сигналы", "Модель дешевеет за неделю, % (0 - выкл)", 0, 100], ["SCAN_INTERVAL", "float", "Сигналы", "Пауза между проверками площадки, сек", 1, 600], ["SCAN_PORTALS", "bool", "Площадки", "Искать лоты на Portals", null, null], ["SCAN_MRKT", "bool", "Площадки", "Искать лоты на MRKT", null, null], ["SCAN_TONNEL", "bool", "Площадки", "Искать лоты на Tonnel", null, null], ["CROSS_MARKET", "bool", "Площадки", "Арбитраж между площадками", null, null], ["TRANSFER_COST_TON", "float", "Площадки", "Стоимость перевода подарка, TON", 0, 100], ["AUTO_LIST_ARBITRAGE", "bool", "Площадки", "Сам выставлять подарок, переведённый по арбитражу", null, null], ["BACKDROP_MODE", "bool", "Площадки", "Сравнивать по фону (больше запросов)", null, null], ["USE_SALES_HISTORY", "bool", "История", "Цена продажи не выше медианы продаж", null, null], ["SALES_WINDOW_HOURS", "float", "История", "Окно продаж модели, часов", 1, 720], ["GIFT_HISTORY", "bool", "История", "Смотреть историю самого подарка", null, null], ["GIFT_CHEAP_PCT", "float", "История", "Пометка: недавно купили дешевле на, %", 0, 100], ["GIFT_MAX_RESALES", "int", "История", "Пометка: перепродаж подряд от", 0, 100], ["GIFT_CAP_MARKUP_PCT", "float", "История", "Не дороже прошлой продажи подарка +, %", 0, 1000], ["GIFT_SKIP_FLAGGED", "bool", "История", "Не присылать помеченные сигналы", null, null], ["REPRICE", "bool", "Купленное", "Снижать цену непроданного", null, null], ["REPRICE_AFTER_HOURS", "float", "Купленное", "Снижать, если не продан часов", 1, 720], ["REPRICE_STEP_PCT", "float", "Купленное", "Шаг снижения, %", 0.1, 50], ["REPRICE_MIN_PROFIT_PCT", "float", "Купленное", "Не ниже прибыли, %", -100, 1000], ["EMOJI", "bool", "Сообщения", "Смайлики", null, null], ["GIFT_PREVIEW", "bool", "Сообщения", "Карточка подарка в сигнале", null, null], ["SHOW_REASON", "bool", "Сообщения", "Строка «почему выгодно»", null, null]];
+const tg = window.Telegram && Telegram.WebApp;
+const app = document.getElementById("app"), note = document.getElementById("note"), saveBtn = document.getElementById("save");
+let start = null, changes = {};
+try {
+  const m = location.hash.match(/s=([A-Za-z0-9_-]+)/);
+  if (m) {
+    const b = m[1].replace(/-/g, "+").replace(/_/g, "/");
+    const bin = atob(b + "===".slice((b.length + 3) % 4));
+    start = JSON.parse(new TextDecoder().decode(Uint8Array.from(bin, c => c.charCodeAt(0))));
+  }
+} catch (e) { start = null; }
+
+function el(tag, attrs, text) { const e = document.createElement(tag); Object.assign(e, attrs || {}); if (text != null) e.textContent = text; return e; }
+
+function useMain() { return tg && tg.initData !== undefined && tg.MainButton && tg.platform !== "unknown"; }
+function refresh() {
+  const n = Object.keys(changes).length, bad = document.querySelector("input.bad");
+  const label = n ? `Сохранить (${n})` : "Сохранить";
+  if (useMain()) {
+    tg.MainButton.setText(label);
+    (n && !bad) ? tg.MainButton.show() : tg.MainButton.hide();
+  } else {
+    saveBtn.textContent = label; saveBtn.style.display = n && !bad ? "block" : "none";
+  }
+}
+function mark(row, key, v) {
+  if (v === start[key]) delete changes[key]; else changes[key] = v;
+  row.classList.toggle("changed", key in changes); refresh();
+}
+function save() {
+  const data = JSON.stringify({ v: 1, c: changes });
+  if (tg && tg.sendData && tg.platform !== "unknown") tg.sendData(data);   // мини-апп закроется, бот ответит в чате
+  else note.textContent = "Открой эту страницу кнопкой «⚙️ Настройки» в чате с ботом.";
+}
+
+if (!start) {
+  note.textContent = "Открой настройки командой /settings в чате с ботом и нажми кнопку «⚙️ Настройки» внизу.";
+} else {
+  let group = null, card = null;
+  for (const [key, type, g, label, lo, hi] of SCHEMA) {
+    if (!(key in start)) continue;
+    if (g !== group) { app.append(el("h2", {}, g)); card = el("div", { className: "card" }); app.append(card); group = g; }
+    const row = el("div", { className: "row" }), id = "f_" + key;
+    row.append(el("label", { htmlFor: id }, label));
+    if (type === "bool") {
+      const sw = el("label", { className: "sw" }), inp = el("input", { type: "checkbox", id, checked: !!start[key] });
+      inp.addEventListener("change", () => {
+        if (key === "AUTOBUY" && inp.checked && tg && tg.showConfirm) {
+          tg.showConfirm("Включить автопокупку? Бот будет сам покупать подарки на Portals в пределах лимитов.", ok => {
+            if (!ok) inp.checked = false; mark(row, key, inp.checked);
+          });
+          return;
+        }
+        mark(row, key, inp.checked);
+      });
+      sw.append(inp, el("span")); row.append(sw);
+      if (key === "AUTOBUY") row.querySelector("label").classList.add("warn");
+    } else {
+      const inp = el("input", { type: "number", id, value: start[key], inputMode: type === "int" ? "numeric" : "decimal",
+                                step: type === "int" ? "1" : "any" });
+      if (lo != null) inp.min = lo; if (hi != null) inp.max = hi;
+      inp.addEventListener("input", () => {
+        const v = Number(String(inp.value).replace(",", "."));
+        const ok = inp.value !== "" && isFinite(v) && (lo == null || v >= lo) && (hi == null || v <= hi) && (type !== "int" || Number.isInteger(v));
+        inp.classList.toggle("bad", !ok);
+        if (ok) mark(row, key, v); else refresh();
+      });
+      row.append(inp);
+    }
+    card.append(row);
+  }
+  note.textContent = "Изменения начинают работать сразу, без перезапуска бота. Токены и ключи здесь не видны и не меняются.";
+}
+saveBtn.addEventListener("click", save);
+if (tg) { tg.ready(); tg.expand(); if (tg.MainButton) tg.MainButton.onClick(save); }
+refresh();
+</script>
+</body>
+</html>
