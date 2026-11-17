@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="referrer" content="no-referrer">
+<title>Gift Terminal</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="app.css">
+<script src="chart.umd.js"></script>
+</head>
+<body>
+<div class="app">
+  <aside class="side">
+    <a class="brand" href="#/dashboard">
+      <img src="logo.svg" alt="" width="28" height="28">
+      <span>gift<b>terminal</b></span>
+    </a>
+    <nav id="nav"></nav>
+    <div class="side-status" id="side-status"></div>
+  </aside>
+  <main>
+    <header class="top">
+      <div>
+        <h1 id="page-title">Dashboard</h1>
+        <div class="crumbs" id="page-sub"></div>
+      </div>
+      <div class="top-right">
+        <span class="live" id="live"></span>
+        <div class="seg" id="ccy"></div>
+        <button class="btn icon" id="refresh" title="Обновить данные"></button>
+      </div>
+    </header>
+    <div class="page" id="page"></div>
+  </main>
+</div>
+<div class="drawer-bg" id="drawer-bg"></div>
+<aside class="drawer" id="drawer" aria-hidden="true"></aside>
+<div class="toast" id="toast"></div>
+<script>window.GT_STATIC = "data.enc";</script>
+<script src="app.js"></script>
+</body>
+</html>
